@@ -2,10 +2,11 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://speech-to-text-backend-fheu.onrender.com';
 
+// Create axios instance without global multipart headers
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'multipart/form-data',
+    'Content-Type': 'application/json',
   },
 });
 
@@ -14,7 +15,12 @@ export const uploadAudio = async (file) => {
   formData.append('audio', file);
   
   try {
-    const response = await api.post('/transcriptions/upload', formData);
+    // Use /api/transcriptions/upload to match backend route
+    const response = await api.post('/api/transcriptions/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data', // Only for this request
+      },
+    });
     return response.data;
   } catch (error) {
     console.error('Error uploading audio:', error);
@@ -24,7 +30,8 @@ export const uploadAudio = async (file) => {
 
 export const getTranscriptions = async () => {
   try {
-    const response = await api.get('/transcriptions');
+    // Use /api/transcriptions to match backend route
+    const response = await api.get('/api/transcriptions');
     return response.data;
   } catch (error) {
     console.error('Error fetching transcriptions:', error);
@@ -34,7 +41,8 @@ export const getTranscriptions = async () => {
 
 export const deleteTranscription = async (id) => {
   try {
-    const response = await api.delete(`/transcriptions/${id}`);
+    // Use /api/transcriptions/${id} to match backend route
+    const response = await api.delete(`/api/transcriptions/${id}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting transcription:', error);
