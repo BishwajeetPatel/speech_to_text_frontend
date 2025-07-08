@@ -1,4 +1,4 @@
-// src/hooks/useSupabase.js
+// src/hooks/useSupabase.js - UPDATED VERSION
 import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react';
 
@@ -10,30 +10,53 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export const useSupabase = () => {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set the initial session and user
-    setSession(supabase.auth.session());
-    setUser(supabase.auth.user());
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (error) {
+        console.error('Error in getInitialSession:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
 
     // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        setSession(newSession);
-        setUser(newSession?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session);
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
     );
 
-    // Cleanup on unmount
     return () => {
-      authListener?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  // Function to handle signIn with email
+  // Function to handle signIn with email (magic link)
   const signIn = async (email) => {
     try {
-      const { error } = await supabase.auth.signIn({ email });
+      const { error } = await supabase.auth.signInWithOtp({ 
+        email,
+        options: {
+          // You can add redirect URL here if needed
+          // emailRedirectTo: 'https://your-app.com/auth/callback'
+        }
+      });
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -58,6 +81,7 @@ export const useSupabase = () => {
     supabase,
     session,
     user,
+    loading,
     signIn,
     signOut,
   };
